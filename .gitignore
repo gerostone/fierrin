@@ -1,0 +1,10 @@
+# Brainstorming companion mockups (transient)
+.superpowers/
+
+# OMC
+.omc/
+
+# Node
+node_modules/
+.next/
+.env*.local
