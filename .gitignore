@@ -4,6 +4,9 @@
 # OMC
 .omc/
 
+# Claude Code local state (settings, locks)
+.claude/
+
 # Node
 node_modules/
 /.pnp
