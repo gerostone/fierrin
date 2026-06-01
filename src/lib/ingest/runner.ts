@@ -14,21 +14,25 @@ interface RunSummary {
   totalUpserted: number;
 }
 
-function toRow(n: NormalizedListing) {
+function toRow(n: NormalizedListing, seenAt: string) {
   return {
     source_id: n.sourceId, external_id: n.externalId, url: n.url, title: n.title,
     brand: n.brand, model: n.model, year: n.year, price: n.price, currency: n.currency,
     mileage_km: n.mileageKm, location_prov: n.locationProv, fuel: n.fuel,
     transmission: n.transmission, seller_type: n.sellerType, thumbnail_url: n.thumbnailUrl,
-    raw: n.raw, dedup_key: computeDedupKey(n), last_seen_at: new Date().toISOString(),
+    raw: n.raw, dedup_key: computeDedupKey(n), last_seen_at: seenAt,
     is_active: true,
   };
 }
 
 export async function runIngestion(deps: RunDeps): Promise<RunSummary> {
   const summary: RunSummary = { okRuns: 0, partialRuns: 0, errorRuns: 0, totalUpserted: 0 };
+  // Marca de inicio: las filas refrescadas en esta corrida tendrán last_seen_at > runStartedAt.
+  const runStartedAt = new Date().toISOString();
 
   for (const connector of deps.connectors) {
+    let sawData = false; // hubo al menos un segmento exitoso para este source
+
     for (const segment of deps.segments) {
       const segLabel = `brand=${segment.brand}&prov=${segment.prov}&price=${segment.priceMin}-${segment.priceMax}`;
       const { data: run } = await deps.db.from('ingest_runs')
@@ -43,19 +47,15 @@ export async function runIngestion(deps: RunDeps): Promise<RunSummary> {
         for (const raw of raws) {
           const n = connector.normalize(raw);
           if (!n) { errors++; continue; }
-          rows.push(toRow(n));
+          rows.push(toRow(n, new Date().toISOString()));
         }
         if (rows.length) {
           const { error } = await deps.db.from('listings')
             .upsert(rows, { onConflict: 'source_id,external_id' });
           if (error) throw new Error(error.message);
         }
-        const seenIds = rows.map((r) => r.external_id);
-        // desactivar los no vistos de este source en esta corrida exitosa
-        await deps.db.from('listings').update({ is_active: false })
-          .eq('source_id', connector.id).eq('is_active', true)
-          .not('external_id', 'in', `(${seenIds.map((s) => `"${s}"`).join(',') || '""'})`);
 
+        sawData = true;
         const status = errors > 0 ? 'partial' : 'ok';
         await deps.db.from('ingest_runs').update({
           status, finished_at: new Date().toISOString(),
@@ -70,6 +70,14 @@ export async function runIngestion(deps: RunDeps): Promise<RunSummary> {
         summary.errorRuns++;
         // seguir con el siguiente connector/segmento
       }
+    }
+
+    // Desactivar los avisos de este source que no se volvieron a ver en esta corrida.
+    // Sólo si hubo datos frescos: si todos los segmentos fallaron, no tocamos lo existente.
+    if (sawData) {
+      await deps.db.from('listings').update({ is_active: false })
+        .eq('source_id', connector.id).eq('is_active', true)
+        .lt('last_seen_at', runStartedAt);
     }
   }
   return summary;

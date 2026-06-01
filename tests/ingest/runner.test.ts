@@ -24,12 +24,13 @@ function makeConnector(id: string, behavior: 'ok' | 'throw'): Connector {
   };
 }
 
-// Doble del cliente DB: registra upserts y runs en memoria.
+// Doble del cliente DB: registra upserts, runs y desactivaciones en memoria.
 function makeFakeDb() {
   const upserts: any[] = [];
   const runs: any[] = [];
+  const deactivations: string[] = []; // source_id por cada llamada de desactivación
   return {
-    upserts, runs,
+    upserts, runs, deactivations,
     from(table: string) {
       if (table === 'ingest_runs') {
         return {
@@ -40,13 +41,15 @@ function makeFakeDb() {
       if (table === 'listings') {
         return {
           upsert: async (rows: any[]) => { upserts.push(...rows); return { error: null }; },
-          update: () => ({ eq: () => ({ eq: () => ({ not: async () => ({ error: null }) }) }) }),
+          update: () => ({ eq: (col: string, val: string) => ({ eq: () => ({ lt: async () => { if (col === 'source_id') deactivations.push(val); return { error: null }; } }) }) }),
         };
       }
       throw new Error('tabla inesperada ' + table);
     },
   };
 }
+
+const seg2: Segment = { brand: 'Ford', prov: 'Córdoba', priceMin: 8000, priceMax: 15000 };
 
 describe('runIngestion', () => {
   it('un portal que falla no frena a los demás', async () => {
@@ -60,5 +63,26 @@ describe('runIngestion', () => {
     expect(summary.okRuns).toBe(1);
     expect(db.upserts.length).toBe(1);            // solo el connector que anduvo
     expect(db.upserts[0].dedup_key).toBeTruthy(); // se calculó la key
+  });
+
+  it('desactiva una sola vez por source tras todos sus segmentos', async () => {
+    const db = makeFakeDb();
+    await runIngestion({
+      db: db as any,
+      connectors: [makeConnector('deautos', 'ok')],
+      segments: [seg, seg2], // dos segmentos: la desactivación NO debe correr por segmento
+    });
+    expect(db.upserts.length).toBe(2);              // un upsert por segmento
+    expect(db.deactivations).toEqual(['deautos']);  // una sola desactivación, no una por segmento
+  });
+
+  it('no desactiva un source cuyos segmentos fallaron todos', async () => {
+    const db = makeFakeDb();
+    await runIngestion({
+      db: db as any,
+      connectors: [makeConnector('mercadolibre', 'throw')],
+      segments: [seg, seg2],
+    });
+    expect(db.deactivations).toEqual([]); // sin datos frescos, no se toca lo existente
   });
 });
