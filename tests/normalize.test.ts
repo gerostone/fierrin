@@ -19,5 +19,14 @@ describe('normalizeBrand', () => {
 
 describe('normalizeProv', () => {
   it('mapea Capital Federal a CABA', () => expect(normalizeProv('Capital Federal')).toBe('CABA'));
+  it('mapea "Ciudad Autónoma de Buenos Aires" a CABA', () =>
+    expect(normalizeProv('Ciudad Autónoma de Buenos Aires')).toBe('CABA'));
+  it('mapea variante sin "de" a CABA', () =>
+    expect(normalizeProv('Ciudad Autónoma Buenos Aires')).toBe('CABA'));
+  it('mapea variante sin acento a CABA', () =>
+    expect(normalizeProv('Ciudad Autonoma de Buenos Aires')).toBe('CABA'));
+  it('mapea "C.A.B.A." a CABA', () => expect(normalizeProv('C.A.B.A.')).toBe('CABA'));
+  it('tolera espacios extra y mayúsculas', () =>
+    expect(normalizeProv('  CIUDAD   AUTONOMA  BUENOS  AIRES ')).toBe('CABA'));
   it('devuelve la provincia tal cual si ya es canónica', () => expect(normalizeProv('Córdoba')).toBe('Córdoba'));
 });

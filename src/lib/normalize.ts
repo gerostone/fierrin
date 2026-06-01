@@ -4,11 +4,25 @@ const BRAND_ALIASES: Record<string, string> = {
   chevy: 'Chevrolet',
 };
 
+// Keys are stored in folded form (see foldProvKey): lowercase, sin acentos,
+// sin puntuación, espacios colapsados. Así una sola entrada cubre las
+// variantes de tipeo de cada provincia.
 const PROV_ALIASES: Record<string, string> = {
   'capital federal': 'CABA',
-  'ciudad autónoma de buenos aires': 'CABA',
+  'ciudad autonoma de buenos aires': 'CABA',
+  'ciudad autonoma buenos aires': 'CABA',
   caba: 'CABA',
 };
+
+function foldProvKey(p: string): string {
+  return p
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[.]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function parseKm(v: string | number | null | undefined): number | null {
   if (v == null) return null;
@@ -33,6 +47,5 @@ export function normalizeBrand(b: string | null | undefined): string | null {
 
 export function normalizeProv(p: string | null | undefined): string | null {
   if (!p) return null;
-  const key = p.trim().toLowerCase();
-  return PROV_ALIASES[key] ?? p.trim();
+  return PROV_ALIASES[foldProvKey(p)] ?? p.trim();
 }
