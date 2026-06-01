@@ -29,4 +29,15 @@ describe('normalizeProv', () => {
   it('tolera espacios extra y mayúsculas', () =>
     expect(normalizeProv('  CIUDAD   AUTONOMA  BUENOS  AIRES ')).toBe('CABA'));
   it('devuelve la provincia tal cual si ya es canónica', () => expect(normalizeProv('Córdoba')).toBe('Córdoba'));
+  it('pliega variante sin acento a la forma canónica', () =>
+    expect(normalizeProv('Cordoba')).toBe('Córdoba'));
+  it('pliega "Tucuman" a "Tucumán"', () => expect(normalizeProv('Tucuman')).toBe('Tucumán'));
+  it('pliega "Neuquen" a "Neuquén"', () => expect(normalizeProv('Neuquen')).toBe('Neuquén'));
+  it('pliega "Rio Negro" a "Río Negro"', () => expect(normalizeProv('Rio Negro')).toBe('Río Negro'));
+  it('pliega "entre rios" (minúsculas) a "Entre Ríos"', () =>
+    expect(normalizeProv('entre rios')).toBe('Entre Ríos'));
+  it('preserva provincias sin acento que ya son canónicas', () =>
+    expect(normalizeProv('Mendoza')).toBe('Mendoza'));
+  it('devuelve tal cual una provincia desconocida', () =>
+    expect(normalizeProv('Patagonia')).toBe('Patagonia'));
 });
