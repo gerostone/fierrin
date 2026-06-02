@@ -35,3 +35,23 @@ describe('parseDeautosJson', () => {
     expect(parseDeautosJson('{"not":"an array"}')).toEqual([]);
   });
 });
+
+describe('provinceFromLocation (vía normalize)', () => {
+  const provOf = (location: string | undefined) =>
+    deautos.normalize({
+      externalId: 'x',
+      raw: { make: 'Ford', model: 'Focus', listing_url: 'https://x', location },
+    })!.locationProv;
+
+  it('toma la provincia del último segmento', () => expect(provOf('Palermo, CABA')).toBe('CABA'));
+  it('descarta "Argentina" y usa el segmento anterior', () =>
+    expect(provOf('Rosario, Santa Fe, Argentina')).toBe('Santa Fe'));
+  it('devuelve null si solo aparece el país', () => expect(provOf('Argentina')).toBeNull());
+  it('devuelve null si el último segmento está vacío', () => expect(provOf('Centro, ')).toBeNull());
+  it('devuelve null para location vacío', () => expect(provOf('')).toBeNull());
+  it('devuelve null para location ausente', () => expect(provOf(undefined)).toBeNull());
+  it('ignora el paréntesis "(A.M.B.A.)"', () =>
+    expect(provOf('Vicente López, Buenos Aires (A.M.B.A.)')).toBe('Buenos Aires'));
+  it('devuelve null si ningún segmento es provincia', () =>
+    expect(provOf('Barrio Norte, Algún Lugar')).toBeNull());
+});

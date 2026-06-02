@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Connector, RawListing, NormalizedListing, Segment } from '@/lib/types';
-import { normalizeBrand, normalizeProv } from '@/lib/normalize';
+import { normalizeBrand, canonicalProv } from '@/lib/normalize';
 
 const BASE = 'https://www.deautos.com';
 const UA = 'FierrinBot/0.1 (+contacto)';
@@ -56,11 +56,18 @@ export function parseDeautosJson(text: string): RawListing[] {
   return out;
 }
 
-// location viene como "Ciudad, Provincia" (a veces con "(A.M.B.A.)"): tomamos la provincia.
+// location viene como "Ciudad, Provincia" (a veces con "(A.M.B.A.)" o un
+// "Argentina"/segmento vacío al final). Recorremos de derecha a izquierda y
+// devolvemos el primer segmento que resuelva a una provincia canónica; null si
+// ninguno lo hace, para no guardar país ni basura en location_prov.
 function provinceFromLocation(loc: string | undefined): string | null {
   if (!loc) return null;
-  const last = loc.split(',').pop() ?? loc;
-  return normalizeProv(last.replace(/\(.*?\)/g, '').trim());
+  const segments = loc.split(',');
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const prov = canonicalProv(segments[i].replace(/\(.*?\)/g, '').trim());
+    if (prov) return prov;
+  }
+  return null;
 }
 
 function normalize(raw: RawListing): NormalizedListing | null {

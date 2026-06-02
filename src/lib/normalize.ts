@@ -53,3 +53,12 @@ export function normalizeProv(p: string | null | undefined): string | null {
   if (!p) return null;
   return PROV_ALIASES[foldProvKey(p)] ?? p.trim();
 }
+
+const CANONICAL_PROVS = new Set(PROVINCES_CANONICAL);
+
+// Devuelve la provincia en forma canónica solo si es una de las 24
+// jurisdicciones; null para vacío, país ("Argentina") o cualquier otra basura.
+export function canonicalProv(p: string | null | undefined): string | null {
+  const norm = normalizeProv(p);
+  return norm && CANONICAL_PROVS.has(norm) ? norm : null;
+}

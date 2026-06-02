@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseKm, parsePrice, normalizeBrand, normalizeProv } from '@/lib/normalize';
+import { parseKm, parsePrice, normalizeBrand, normalizeProv, canonicalProv } from '@/lib/normalize';
 
 describe('parseKm', () => {
   it('parsea "80.000 km"', () => expect(parseKm('80.000 km')).toBe(80000));
@@ -40,4 +40,18 @@ describe('normalizeProv', () => {
     expect(normalizeProv('Mendoza')).toBe('Mendoza'));
   it('devuelve tal cual una provincia desconocida', () =>
     expect(normalizeProv('Patagonia')).toBe('Patagonia'));
+});
+
+describe('canonicalProv', () => {
+  it('acepta provincia canónica', () => expect(canonicalProv('Córdoba')).toBe('Córdoba'));
+  it('pliega variante sin acento a canónica', () => expect(canonicalProv('Cordoba')).toBe('Córdoba'));
+  it('mapea alias de CABA a canónica', () => expect(canonicalProv('Capital Federal')).toBe('CABA'));
+  it('rechaza el país "Argentina"', () => expect(canonicalProv('Argentina')).toBeNull());
+  it('rechaza provincia desconocida', () => expect(canonicalProv('Patagonia')).toBeNull());
+  it('trata vacío como null', () => expect(canonicalProv('')).toBeNull());
+  it('trata espacios en blanco como null', () => expect(canonicalProv('   ')).toBeNull());
+  it('trata null/undefined como null', () => {
+    expect(canonicalProv(null)).toBeNull();
+    expect(canonicalProv(undefined)).toBeNull();
+  });
 });
