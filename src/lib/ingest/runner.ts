@@ -1,8 +1,9 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Connector, Segment, NormalizedListing } from '@/lib/types';
 import { computeDedupKey } from '@/lib/dedup';
 
 interface RunDeps {
-  db: any; // cliente Supabase (service role) o doble compatible
+  db: SupabaseClient; // cliente Supabase (service role) o doble compatible
   connectors: Connector[];
   segments: Segment[];
 }
@@ -63,9 +64,9 @@ export async function runIngestion(deps: RunDeps): Promise<RunSummary> {
         }).eq('id', runId);
         if (status === 'ok') summary.okRuns++; else summary.partialRuns++;
         summary.totalUpserted += rows.length;
-      } catch (e: any) {
+      } catch (e) {
         await deps.db.from('ingest_runs').update({
-          status: 'error', finished_at: new Date().toISOString(), error_detail: String(e?.message ?? e),
+          status: 'error', finished_at: new Date().toISOString(), error_detail: e instanceof Error ? e.message : String(e),
         }).eq('id', runId);
         summary.errorRuns++;
         // seguir con el siguiente connector/segmento

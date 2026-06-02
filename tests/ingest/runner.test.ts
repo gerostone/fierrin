@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { runIngestion } from '@/lib/ingest/runner';
 import type { Connector, RawListing, NormalizedListing, Segment } from '@/lib/types';
+
+type Row = Record<string, unknown>;
 
 const seg: Segment = { brand: 'Volkswagen', prov: 'CABA', priceMin: 0, priceMax: 8000 };
 
@@ -26,21 +29,21 @@ function makeConnector(id: string, behavior: 'ok' | 'throw'): Connector {
 
 // Doble del cliente DB: registra upserts, runs y desactivaciones en memoria.
 function makeFakeDb() {
-  const upserts: any[] = [];
-  const runs: any[] = [];
+  const upserts: Row[] = [];
+  const runs: Row[] = [];
   const deactivations: string[] = []; // source_id por cada llamada de desactivación
   return {
     upserts, runs, deactivations,
     from(table: string) {
       if (table === 'ingest_runs') {
         return {
-          insert: (row: any) => { runs.push({ ...row }); return { select: () => ({ single: async () => ({ data: { id: 'run-' + runs.length }, error: null }) }) }; },
-          update: (patch: any) => ({ eq: async () => { Object.assign(runs[runs.length - 1], patch); return { error: null }; } }),
+          insert: (row: Row) => { runs.push({ ...row }); return { select: () => ({ single: async () => ({ data: { id: 'run-' + runs.length }, error: null }) }) }; },
+          update: (patch: Row) => ({ eq: async () => { Object.assign(runs[runs.length - 1], patch); return { error: null }; } }),
         };
       }
       if (table === 'listings') {
         return {
-          upsert: async (rows: any[]) => { upserts.push(...rows); return { error: null }; },
+          upsert: async (rows: Row[]) => { upserts.push(...rows); return { error: null }; },
           update: () => ({ eq: (col: string, val: string) => ({ eq: () => ({ lt: async () => { if (col === 'source_id') deactivations.push(val); return { error: null }; } }) }) }),
         };
       }
@@ -55,7 +58,7 @@ describe('runIngestion', () => {
   it('un portal que falla no frena a los demás', async () => {
     const db = makeFakeDb();
     const summary = await runIngestion({
-      db: db as any,
+      db: db as unknown as SupabaseClient,
       connectors: [makeConnector('mercadolibre', 'throw'), makeConnector('deautos', 'ok')],
       segments: [seg],
     });
@@ -68,7 +71,7 @@ describe('runIngestion', () => {
   it('desactiva una sola vez por source tras todos sus segmentos', async () => {
     const db = makeFakeDb();
     await runIngestion({
-      db: db as any,
+      db: db as unknown as SupabaseClient,
       connectors: [makeConnector('deautos', 'ok')],
       segments: [seg, seg2], // dos segmentos: la desactivación NO debe correr por segmento
     });
@@ -79,7 +82,7 @@ describe('runIngestion', () => {
   it('no desactiva un source cuyos segmentos fallaron todos', async () => {
     const db = makeFakeDb();
     await runIngestion({
-      db: db as any,
+      db: db as unknown as SupabaseClient,
       connectors: [makeConnector('mercadolibre', 'throw')],
       segments: [seg, seg2],
     });

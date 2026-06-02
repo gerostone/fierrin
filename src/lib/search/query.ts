@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SearchFilters } from './filters';
 
 export interface ListingRow {
@@ -10,7 +11,7 @@ export interface ListingRow {
 
 const PAGE_SIZE = 24;
 
-export async function searchListings(db: any, f: SearchFilters): Promise<{ items: ListingRow[]; nextCursor: { price: number; id: string } | null }> {
+export async function searchListings(db: SupabaseClient, f: SearchFilters): Promise<{ items: ListingRow[]; nextCursor: { price: number; id: string } | null }> {
   let q = db.from('listings').select('*').eq('is_active', true);
 
   if (f.q) q = q.ilike('title', `%${f.q}%`);

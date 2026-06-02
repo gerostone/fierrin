@@ -8,6 +8,7 @@ export function ListingCard({ group }: { group: ListingRow[] }) {
   return (
     <Link href={`/aviso/${main.id}`} className="block rounded-lg border bg-white overflow-hidden hover:shadow-md transition">
       <div className="aspect-video bg-[#e8eef5] flex items-center justify-center text-[#7a8aa0]">
+        {/* eslint-disable-next-line @next/next/no-img-element -- thumbnails vienen de dominios arbitrarios de cada portal; next/image exige remotePatterns fijos */}
         {main.thumbnail_url ? <img src={main.thumbnail_url} alt={main.title} className="h-full w-full object-cover" /> : 'sin foto'}
       </div>
       <div className="p-3">
