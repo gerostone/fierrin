@@ -1,0 +1,43 @@
+{
+  "_nota": "FIXTURE SINTÉTICO basado en el esquema documentado de /sites/MLA/search. DEBE reemplazarse por una captura REAL una vez que existan credenciales de ML (ver Task 7, Step 1 del plan). El parseo del connector se valida contra este shape; verificar los nombres de campo/atributo contra la respuesta real antes de dar por cerrada la tarea.",
+  "site_id": "MLA",
+  "paging": { "total": 1, "primary_results": 1, "offset": 0, "limit": 50 },
+  "results": [
+    {
+      "id": "MLA1234567890",
+      "title": "Volkswagen Gol Trend 1.6 Comfortline 2018",
+      "price": 12500,
+      "currency_id": "USD",
+      "permalink": "https://auto.mercadolibre.com.ar/MLA-1234567890-volkswagen-gol-trend-16-comfortline-2018-_JM",
+      "thumbnail": "http://http2.mlstatic.com/D_NQ_NP_123456-MLA.jpg",
+      "seller": { "id": 111222333, "car_dealer": false },
+      "address": { "state_id": "TUxBUENBUGw3M2E1", "state_name": "Capital Federal", "city_name": "Palermo" },
+      "attributes": [
+        { "id": "BRAND", "name": "Marca", "value_name": "Volkswagen" },
+        { "id": "MODEL", "name": "Modelo", "value_name": "Gol Trend" },
+        { "id": "VEHICLE_YEAR", "name": "Año", "value_name": "2018" },
+        { "id": "KILOMETERS", "name": "Kilómetros", "value_name": "85000 km" },
+        { "id": "FUEL_TYPE", "name": "Combustible", "value_name": "Nafta" },
+        { "id": "TRANSMISSION", "name": "Transmisión", "value_name": "Manual" }
+      ]
+    },
+    {
+      "id": "MLA9876543210",
+      "title": "Toyota Corolla XEI 2.0 CVT 2021",
+      "price": 28000000,
+      "currency_id": "ARS",
+      "permalink": "https://auto.mercadolibre.com.ar/MLA-9876543210-toyota-corolla-xei-20-cvt-2021-_JM",
+      "thumbnail": "http://http2.mlstatic.com/D_NQ_NP_987654-MLA.jpg",
+      "seller": { "id": 444555666, "car_dealer": true },
+      "address": { "state_id": "TUxBUFBST3Zob2Jh", "state_name": "Córdoba", "city_name": "Córdoba" },
+      "attributes": [
+        { "id": "BRAND", "name": "Marca", "value_name": "Toyota" },
+        { "id": "MODEL", "name": "Modelo", "value_name": "Corolla" },
+        { "id": "VEHICLE_YEAR", "name": "Año", "value_name": "2021" },
+        { "id": "KILOMETERS", "name": "Kilómetros", "value_name": "32000 km" },
+        { "id": "FUEL_TYPE", "name": "Combustible", "value_name": "Nafta" },
+        { "id": "TRANSMISSION", "name": "Transmisión", "value_name": "Automática" }
+      ]
+    }
+  ]
+}

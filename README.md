@@ -2,7 +2,7 @@
 
 Agregador de autos usados de Argentina. Reúne publicaciones de varios portales de venta de autos en una sola búsqueda unificada, con deduplicación cross-portal: un mismo auto publicado en distintos sitios se muestra una sola vez, indicando en cuántos portales aparece.
 
-> **Estado:** MVP (sub-proyecto 1) funcionando — ingesta + normalización + dedup + búsqueda. Fuente activa: **deautos**. La fuente **MercadoLibre** está implementada a nivel de abstracción pero pendiente de credenciales de API (ver [Roadmap](#roadmap)).
+> **Estado:** MVP (sub-proyecto 1) funcionando — ingesta + normalización + dedup + búsqueda. Fuente activa: **deautos**. La fuente **MercadoLibre** está implementada (connector + OAuth Authorization Code) y a la espera de credenciales reales para la verificación end-to-end (ver [Roadmap](#roadmap)).
 
 ---
 
@@ -176,12 +176,13 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 SUPABASE_SERVICE_ROLE_KEY=<service role key>
 
-# Protege el endpoint de ingesta (cualquier string secreto)
+# Protege el endpoint de ingesta y el inicio del OAuth de ML (cualquier string secreto)
 INGEST_SECRET=<secreto largo y aleatorio>
 
-# MercadoLibre API — completar antes de la Tarea 7 (ver Roadmap)
-ML_CLIENT_ID=<pendiente>
-ML_CLIENT_SECRET=<pendiente>
+# MercadoLibre OAuth — App ID / Secret Key de https://developers.mercadolibre.com.ar
+ML_CLIENT_ID=<app id>
+ML_CLIENT_SECRET=<secret key>
+ML_REDIRECT_URI=http://localhost:3000/api/ml/callback
 ```
 
 | Variable | Para qué | Dónde se usa |
@@ -189,8 +190,9 @@ ML_CLIENT_SECRET=<pendiente>
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase | cliente + server |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública | cliente |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clave service-role (solo server) | `lib/supabase/server.ts` |
-| `INGEST_SECRET` | Bearer token del endpoint de ingesta | `api/ingest/run` |
-| `ML_CLIENT_ID` / `ML_CLIENT_SECRET` | Credenciales de la API de MercadoLibre | connector ML (pendiente) |
+| `INGEST_SECRET` | Bearer token de ingesta + `?secret=` del login de ML | `api/ingest/run`, `api/ml/login` |
+| `ML_CLIENT_ID` / `ML_CLIENT_SECRET` | Credenciales OAuth de MercadoLibre | `lib/ml/oauth.ts` |
+| `ML_REDIRECT_URI` | Redirect registrada en la app de ML | `lib/ml/oauth.ts`, callback |
 
 ---
 
@@ -209,7 +211,7 @@ ML_CLIENT_SECRET=<pendiente>
 
 ## Base de datos
 
-Tres tablas (ver `supabase/migrations/0001_init_schema.sql`):
+Tablas en `supabase/migrations/` — `0001` define `sources`, `listings` e `ingest_runs`; `0003` agrega `oauth_tokens` (una fila por proveedor: access/refresh token + vencimiento, usada por el OAuth de MercadoLibre).
 
 ### `sources`
 Catálogo de portales. `type` es `'api'` o `'scrape'`.
@@ -287,6 +289,15 @@ curl -X POST http://localhost:3000/api/ingest/run \
   -H "Authorization: Bearer $INGEST_SECRET"
 ```
 
+### `GET /api/ml/login` y `GET /api/ml/callback` (OAuth de MercadoLibre)
+ML deprecó el grant `client_credentials`, así que la app se autoriza una vez con el flujo Authorization Code:
+
+1. Abrí `http://localhost:3000/api/ml/login?secret=<INGEST_SECRET>` en el navegador. Setea una cookie `state` anti-CSRF y redirige a la pantalla de autorización de ML.
+2. Autorizás con tu cuenta de ML; ML redirige a `/api/ml/callback?code=…&state=…`.
+3. El callback valida el `state`, canjea el `code` por access + refresh token y los persiste en la tabla `oauth_tokens`.
+
+A partir de ahí, el connector de ML obtiene un access token válido vía `getValidToken()` (refresca solo cuando está por vencer). El `login` está protegido con `INGEST_SECRET` para que nadie sobrescriba los tokens con otra cuenta.
+
 ### `GET /api/search`
 Búsqueda en JSON. Acepta todos los filtros como query params (ver abajo).
 
@@ -349,7 +360,7 @@ Pensado para **Vercel**:
 
 ## Roadmap
 
-- [ ] **Connector de MercadoLibre** (Tarea 7) — la abstracción y el dedup ya están listos; falta `ML_CLIENT_ID` / `ML_CLIENT_SECRET` desde el portal de desarrolladores de ML (su API devuelve 403 sin auth).
+- [ ] **Verificación end-to-end de MercadoLibre** (Tarea 7) — connector + OAuth (`lib/ml/oauth.ts`, `/api/ml/login`, `/api/ml/callback`) ya implementados y testeados con HTTP mockeado. Falta: crear la app en el portal de ML, cargar `ML_CLIENT_ID`/`ML_CLIENT_SECRET`, autorizar vía `/api/ml/login`, **reemplazar el fixture sintético `tests/fixtures/ml-search-sample.json` por una captura real** y confirmar los nombres de campo/atributo y el ID de categoría contra la respuesta real.
 - [ ] Paginación keyset para los órdenes `year` / `km` / `new`.
 - [ ] Lock para evitar solapamiento entre una corrida de cron y una ingesta manual concurrente.
 - [ ] Más portales (cada uno = un nuevo `Connector`).

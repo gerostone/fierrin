@@ -276,6 +276,6 @@ Crear `tests/connectors/autofoo.test.ts` con un fixture real capturado (ver `tes
 
 ### Pendientes conocidos (ver [roadmap](../README.md#roadmap))
 
-- Connector de MercadoLibre (bloqueado por credenciales de API).
+- MercadoLibre: connector + OAuth Authorization Code (`lib/ml/oauth.ts`, `lib/connectors/mercadolibre.ts`, rutas `/api/ml/login` y `/api/ml/callback`) ya implementados y testeados con mocks. Pendiente: credenciales reales, autorización end-to-end y reemplazar el fixture sintético por una captura real para verificar nombres de campo/atributo y el ID de categoría.
 - Keyset para órdenes `year` / `km` / `new`.
 - Lock para evitar que una ingesta manual concurrente con el cron se pise la desactivación.
