@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { CONNECTORS } from '@/lib/connectors';
@@ -9,7 +10,11 @@ export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 function authorized(req: Request): boolean {
-  return req.headers.get('authorization') === `Bearer ${process.env.INGEST_SECRET}`;
+  const secret = process.env.INGEST_SECRET;
+  if (!secret) return false; // sin secreto configurado, el endpoint queda cerrado
+  const provided = Buffer.from(req.headers.get('authorization') ?? '');
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 async function handle(req: Request) {

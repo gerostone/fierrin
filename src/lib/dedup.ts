@@ -6,7 +6,7 @@ const PRICE_BUCKET_RATIO = 0.1; // buckets relativos del 10%
 
 /** Agrupa posibles duplicados cross-portal. null si falta info clave. */
 export function computeDedupKey(l: NormalizedListing): string | null {
-  if (!l.brand || !l.model || l.year == null || l.price == null || l.mileageKm == null || !l.locationProv) {
+  if (!l.brand || !l.model || l.year == null || l.price == null || l.price <= 0 || l.mileageKm == null || !l.locationProv) {
     return null;
   }
   const kmBucket = Math.round(l.mileageKm / KM_BUCKET);

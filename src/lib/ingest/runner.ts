@@ -36,9 +36,13 @@ export async function runIngestion(deps: RunDeps): Promise<RunSummary> {
 
     for (const segment of deps.segments) {
       const segLabel = `brand=${segment.brand}&prov=${segment.prov}&price=${segment.priceMin}-${segment.priceMax}`;
-      const { data: run } = await deps.db.from('ingest_runs')
+      const { data: run, error: runErr } = await deps.db.from('ingest_runs')
         .insert({ source_id: connector.id, segment: segLabel, status: 'running' })
         .select().single();
+      if (runErr || !run) {
+        summary.errorRuns++;
+        continue; // no se pudo registrar la corrida del segmento; saltar al siguiente
+      }
       const runId = run.id;
 
       try {

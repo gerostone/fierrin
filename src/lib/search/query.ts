@@ -30,7 +30,9 @@ export async function searchListings(db: SupabaseClient, f: SearchFilters): Prom
   if (f.sellerType) q = q.eq('seller_type', f.sellerType);
   if (f.sources?.length) q = q.in('source_id', f.sources);
 
-  // Orden + keyset (cursor sobre (price, id) para el orden por precio)
+  // Orden + keyset. Sólo el orden por precio tiene cursor keyset funcional;
+  // los demás órdenes devuelven la primera página (sin paginación todavía).
+  const priceSort = f.sort !== 'year' && f.sort !== 'km' && f.sort !== 'new';
   if (f.sort === 'year') q = q.order('year', { ascending: false }).order('id');
   else if (f.sort === 'km') q = q.order('mileage_km', { ascending: true }).order('id');
   else if (f.sort === 'new') q = q.order('first_seen_at', { ascending: false }).order('id');
@@ -47,7 +49,7 @@ export async function searchListings(db: SupabaseClient, f: SearchFilters): Prom
   const hasMore = rows.length > PAGE_SIZE;
   const items = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
   const last = items[items.length - 1];
-  const nextCursor = hasMore && last?.price != null ? { price: last.price, id: last.id } : null;
+  const nextCursor = priceSort && hasMore && last?.price != null ? { price: last.price, id: last.id } : null;
   return { items, nextCursor };
 }
 
