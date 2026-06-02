@@ -276,6 +276,6 @@ Crear `tests/connectors/autofoo.test.ts` con un fixture real capturado (ver `tes
 
 ### Pendientes conocidos (ver [roadmap](../README.md#roadmap))
 
-- MercadoLibre: connector + OAuth Authorization Code (`lib/ml/oauth.ts`, `lib/connectors/mercadolibre.ts`, rutas `/api/ml/login` y `/api/ml/callback`) ya implementados y testeados con mocks. Pendiente: credenciales reales, autorización end-to-end y reemplazar el fixture sintético por una captura real para verificar nombres de campo/atributo y el ID de categoría.
+- MercadoLibre: connector + OAuth Authorization Code (`lib/ml/oauth.ts`, `lib/connectors/mercadolibre.ts`, rutas `/api/ml/login` y `/api/ml/callback`) ya implementados, testeados con mocks y con **autorización end-to-end funcionando** (token + refresh persistidos en `oauth_tokens`; la app de ML necesita el flujo *Refresh Token* habilitado y una Redirect URI https pública). **Bloqueo de ML:** con OAuth válido, `/sites/MLA/search` e `/items` devuelven `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` (`blocked_by: PolicyAgent`) para apps estándar — sólo responden metadata (`/categories/*`) y `/users/me`. El connector queda fuera del registro (`ML_ENABLED`) hasta que ML apruebe el acceso a búsqueda/items; recién entonces se reemplaza el fixture sintético por una captura real y se verifican campos/atributos y el ID de categoría.
 - Keyset para órdenes `year` / `km` / `new`.
 - Lock para evitar que una ingesta manual concurrente con el cron se pise la desactivación.

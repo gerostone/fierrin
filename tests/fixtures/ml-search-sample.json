@@ -1,5 +1,5 @@
 {
-  "_nota": "FIXTURE SINTÉTICO basado en el esquema documentado de /sites/MLA/search. DEBE reemplazarse por una captura REAL una vez que existan credenciales de ML (ver Task 7, Step 1 del plan). El parseo del connector se valida contra este shape; verificar los nombres de campo/atributo contra la respuesta real antes de dar por cerrada la tarea.",
+  "_nota": "FIXTURE SINTÉTICO basado en el esquema documentado de /sites/MLA/search. No se pudo reemplazar por una captura REAL: con OAuth válido, ML bloquea por política (403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES, blocked_by PolicyAgent) el acceso de apps estándar a /sites/MLA/search e /items. El connector queda fuera del registro (ML_ENABLED) hasta que ML apruebe el acceso a esos recursos; al obtenerlo, capturar la respuesta real y verificar nombres de campo/atributo y category contra esta forma.",
   "site_id": "MLA",
   "paging": { "total": 1, "primary_results": 1, "offset": 0, "limit": 50 },
   "results": [

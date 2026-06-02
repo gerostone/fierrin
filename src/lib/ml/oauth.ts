@@ -13,12 +13,17 @@ export interface MlTokens {
   expires_at: number; // epoch ms
 }
 
+// ML solo emite refresh_token si la autorización pide offline_access; sin él,
+// el access_token vence en ~6h y no hay forma de renovarlo sin re-autorizar.
+const SCOPE = 'offline_access read';
+
 /** URL a la que redirigir al usuario para que autorice la app. */
 export function authUrl(state: string): string {
   const p = new URLSearchParams({
     response_type: 'code',
     client_id: process.env.ML_CLIENT_ID ?? '',
     redirect_uri: process.env.ML_REDIRECT_URI ?? '',
+    scope: SCOPE,
     state,
   });
   return `${AUTH_BASE}?${p}`;

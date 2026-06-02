@@ -2,7 +2,7 @@
 
 Agregador de autos usados de Argentina. Reúne publicaciones de varios portales de venta de autos en una sola búsqueda unificada, con deduplicación cross-portal: un mismo auto publicado en distintos sitios se muestra una sola vez, indicando en cuántos portales aparece.
 
-> **Estado:** MVP (sub-proyecto 1) funcionando — ingesta + normalización + dedup + búsqueda. Fuente activa: **deautos**. La fuente **MercadoLibre** está implementada (connector + OAuth Authorization Code) y a la espera de credenciales reales para la verificación end-to-end (ver [Roadmap](#roadmap)).
+> **Estado:** MVP (sub-proyecto 1) funcionando — ingesta + normalización + dedup + búsqueda. Fuente activa: **deautos**. La fuente **MercadoLibre** está implementada (connector + OAuth Authorization Code) y el OAuth funciona end-to-end, pero **ML bloquea por política** (`403 PolicyAgent`) el acceso de apps estándar a la API de búsqueda/items: el connector queda desactivado (`ML_ENABLED`) a la espera de que ML apruebe el acceso a esos recursos (ver [Roadmap](#roadmap)).
 
 ---
 
@@ -182,8 +182,14 @@ INGEST_SECRET=<secreto largo y aleatorio>
 # MercadoLibre OAuth — App ID / Secret Key de https://developers.mercadolibre.com.ar
 ML_CLIENT_ID=<app id>
 ML_CLIENT_SECRET=<secret key>
-ML_REDIRECT_URI=http://localhost:3000/api/ml/callback
+# La Redirect URI debe ser un dominio público https (ML rechaza http y localhost).
+# Para autorizar en local usá un túnel (p.ej. cloudflared) y registrá esa URL en la app.
+ML_REDIRECT_URI=https://<tu-tunel>.trycloudflare.com/api/ml/callback
+# Activá el connector de ML sólo cuando ML apruebe el acceso a search/items (hoy bloqueado por PolicyAgent).
+ML_ENABLED=false
 ```
+
+> ⚠️ ML **exige `https://`** en la redirect URI (rechaza `http://localhost`). Para autorizar en local corré `npm run dev:https` (Next genera un cert autofirmado; aceptá la advertencia del navegador). El `dev` normal en http sigue para el resto del desarrollo y los E2E.
 
 | Variable | Para qué | Dónde se usa |
 |----------|----------|--------------|
@@ -201,6 +207,7 @@ ML_REDIRECT_URI=http://localhost:3000/api/ml/callback
 | Comando | Qué hace |
 |---------|----------|
 | `npm run dev` | Servidor de desarrollo (Turbopack) |
+| `npm run dev:https` | Dev con HTTPS (cert autofirmado) — necesario para el OAuth de ML |
 | `npm run build` | Build de producción |
 | `npm start` | Servir el build |
 | `npm run lint` | ESLint |
@@ -292,11 +299,17 @@ curl -X POST http://localhost:3000/api/ingest/run \
 ### `GET /api/ml/login` y `GET /api/ml/callback` (OAuth de MercadoLibre)
 ML deprecó el grant `client_credentials`, así que la app se autoriza una vez con el flujo Authorization Code:
 
-1. Abrí `http://localhost:3000/api/ml/login?secret=<INGEST_SECRET>` en el navegador. Setea una cookie `state` anti-CSRF y redirige a la pantalla de autorización de ML.
+1. Abrí `https://<tu-tunel>/api/ml/login?secret=<INGEST_SECRET>` (mismo dominio que la Redirect URI, para que la cookie de `state` viaje al callback). Setea una cookie `state` anti-CSRF y redirige a la pantalla de autorización de ML.
 2. Autorizás con tu cuenta de ML; ML redirige a `/api/ml/callback?code=…&state=…`.
 3. El callback valida el `state`, canjea el `code` por access + refresh token y los persiste en la tabla `oauth_tokens`.
 
 A partir de ahí, el connector de ML obtiene un access token válido vía `getValidToken()` (refresca solo cuando está por vencer). El `login` está protegido con `INGEST_SECRET` para que nadie sobrescriba los tokens con otra cuenta.
+
+**Requisitos en la config de la app de ML** (portal de desarrolladores → tu app → *Configuración y scopes*):
+- **Flujos OAuth:** tildar **Refresh Token** (además de Authorization Code). Sin esto ML no devuelve `refresh_token` y el access token vence en ~6h sin renovación.
+- **Redirect URI:** un dominio público https (ML rechaza `http` y `localhost`).
+
+> **⚠️ Bloqueo de ML (PolicyAgent):** con OAuth válido, ML responde `403 PA_UNAUTHORIZED_RESULT_FROM_POLICIES` (`blocked_by: PolicyAgent`) a `/sites/MLA/search` y `/items/{id}` para apps estándar. Sólo funcionan endpoints de metadata (p.ej. `/categories/MLA1744`) y `/users/me`. El acceso a búsqueda/items requiere aprobación de ML; hasta entonces el connector está fuera del registro (`ML_ENABLED=false`).
 
 ### `GET /api/search`
 Búsqueda en JSON. Acepta todos los filtros como query params (ver abajo).
@@ -360,7 +373,7 @@ Pensado para **Vercel**:
 
 ## Roadmap
 
-- [ ] **Verificación end-to-end de MercadoLibre** (Tarea 7) — connector + OAuth (`lib/ml/oauth.ts`, `/api/ml/login`, `/api/ml/callback`) ya implementados y testeados con HTTP mockeado. Falta: crear la app en el portal de ML, cargar `ML_CLIENT_ID`/`ML_CLIENT_SECRET`, autorizar vía `/api/ml/login`, **reemplazar el fixture sintético `tests/fixtures/ml-search-sample.json` por una captura real** y confirmar los nombres de campo/atributo y el ID de categoría contra la respuesta real.
+- [ ] **Acceso a la API de listings de MercadoLibre** (Tarea 7) — connector + OAuth ya implementados, testeados y con autorización end-to-end funcionando (token + refresh persistidos en `oauth_tokens`). **Bloqueado por ML:** `/sites/MLA/search` e `/items` devuelven `403 PolicyAgent` para apps estándar. Pendiente: **solicitar a ML el acceso a esos recursos**; al obtenerlo, poner `ML_ENABLED=true`, **reemplazar el fixture sintético `tests/fixtures/ml-search-sample.json` por una captura real** y confirmar nombres de campo/atributo y el ID de categoría contra la respuesta real.
 - [ ] Paginación keyset para los órdenes `year` / `km` / `new`.
 - [ ] Lock para evitar solapamiento entre una corrida de cron y una ingesta manual concurrente.
 - [ ] Más portales (cada uno = un nuevo `Connector`).

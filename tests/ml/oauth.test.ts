@@ -19,6 +19,7 @@ describe('authUrl', () => {
     expect(u.searchParams.get('response_type')).toBe('code');
     expect(u.searchParams.get('client_id')).toBe('cid');
     expect(u.searchParams.get('redirect_uri')).toBe('http://localhost:3000/api/ml/callback');
+    expect(u.searchParams.get('scope')).toContain('offline_access');
     expect(u.searchParams.get('state')).toBe('xyz');
   });
 });
